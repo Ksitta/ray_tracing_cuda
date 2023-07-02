@@ -12,6 +12,7 @@
 #include "moving_sphere.cuh"
 #include "common.cuh"
 #include "rect.cuh"
+#include "revsurface.cuh"
 
 // Matching the C++ code would recurse enough into color() calls that
 // it was blowing up the stack, so we have to turn this into a
@@ -84,7 +85,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 }
 
 #define RND (curand_uniform(&local_rand_state))
-const int object_num = 6;
+const int object_num = 8;
 
 // __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
 //     if (threadIdx.x == 0 && blockIdx.x == 0) {
@@ -137,76 +138,89 @@ __device__ void add_object(hitable **d_list, hitable *object, int i) {
     d_list[i] = object;
 }
 
-__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        curandState local_rand_state = *rand_state;
-        auto red   = new lambertian(vec3(.65, .05, .05));
-        auto white = new lambertian(vec3(.73, .73, .73));
-        auto green = new lambertian(vec3(.12, .45, .15));
-        auto light = new diffuse_light(vec3(15, 15, 15));
-
-        add_object(d_list, new yz_rect(0, 555, 0, 555, 555, green), 0);
-        add_object(d_list, new yz_rect(0, 555, 0, 555, 0, red), 1);
-        add_object(d_list, new xz_rect(213, 343, 227, 332, 554, light), 2);
-        add_object(d_list, new xz_rect(0, 555, 0, 555, 0, white), 3);
-        add_object(d_list, new xz_rect(0, 555, 0, 555, 555, white), 4);
-        add_object(d_list, new xy_rect(0, 555, 0, 555, 555, white), 5);
-
-
-        *rand_state = local_rand_state;
-        *d_world  = new hitable_list(d_list, object_num);
-
-        // float aspect_ratio = 1.0;
-        // int image_width = 600;
-        // int samples_per_pixel = 200;
-        vec3 background = vec3(0,0,0);
-        vec3 lookfrom = vec3(278, 278, -800);
-        vec3 lookat = vec3(278, 278, 0);
-        float vfov = 40.0;
-        float dist_to_focus = 1;
-        float aperture = 0;
-
-        *d_camera   = new camera(lookfrom,
-                                 lookat,
-                                 vec3(0,1,0),
-                                 vfov,
-                                 float(nx)/float(ny),
-                                 aperture,
-                                 dist_to_focus);
-    }
-}
-
 // __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
 //     if (threadIdx.x == 0 && blockIdx.x == 0) {
 //         curandState local_rand_state = *rand_state;
-//         d_list[0] = new yz_rect(0, 1000, 0, 1000, 1, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
-//         d_list[1] = new sphere(vec3(50, 40.8, 1e5f),  1e5, new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f)));
-//         d_list[2] = new sphere(vec3(50, 1e5, 81.6), 1e5, new lambertian(vec3(200 / 255.f, 150 / 255.f, 123 / 255.f)));
-//         d_list[3] = new sphere(vec3(50, -1e5 + 81.6, 81.6),  1e5, new lambertian(vec3(200 / 255.f, 150 / 255.f, 123 / 255.f)));
-        
-//         d_list[4] = new sphere(vec3(60, 13, 100.6), 13, new metal(vec3(0.999, 0.999, 0.999), 0));
-//         d_list[5] = new sphere(vec3(128, 15, 110),  15, new dielectric(1.5));
+//         auto red   = new lambertian(vec3(.65, .05, .05));
+//         auto white = new lambertian(vec3(.73, .73, .73));
+//         auto green = new lambertian(vec3(.12, .45, .15));
+//         auto light = new diffuse_light(vec3(15, 15, 15));
 
-//         d_list[6] = new sphere(vec3(80, 681.6 - 0.285, 115), 600, new diffuse_light(vec3(7, 7, 7))),
+//         add_object(d_list, new yz_rect(0, 555, 0, 555, 555, green), 0);
+//         add_object(d_list, new yz_rect(0, 555, 0, 555, 0, red), 1);
+//         add_object(d_list, new xz_rect(213, 343, 227, 332, 554, light), 2);
+//         add_object(d_list, new xz_rect(0, 555, 0, 555, 0, white), 3);
+//         add_object(d_list, new xz_rect(0, 555, 0, 555, 555, white), 4);
+//         add_object(d_list, new xy_rect(0, 555, 0, 555, 555, white), 5);
 
-//         d_list[7] = new sphere(vec3(70, 12.8, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f))),
 
 //         *rand_state = local_rand_state;
 //         *d_world  = new hitable_list(d_list, object_num);
 
-//         vec3 lookfrom(140, 52, 180.6f);
-//         vec3 lookat(50, 30, 50);
+//         // float aspect_ratio = 1.0;
+//         // int image_width = 600;
+//         // int samples_per_pixel = 200;
+//         vec3 background = vec3(0,0,0);
+//         vec3 lookfrom = vec3(278, 278, -800);
+//         vec3 lookat = vec3(278, 278, 0);
+//         float vfov = 40.0;
 //         float dist_to_focus = 1;
 //         float aperture = 0;
+
 //         *d_camera   = new camera(lookfrom,
 //                                  lookat,
 //                                  vec3(0,1,0),
-//                                  45,
+//                                  vfov,
 //                                  float(nx)/float(ny),
 //                                  aperture,
 //                                  dist_to_focus);
 //     }
 // }
+
+__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        curandState local_rand_state = *rand_state;
+        d_list[0] = new yz_rect(0, 1000, 0, 1000, 1, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
+        d_list[1] = new xy_rect(0, 1000, 0, 1000, 0, new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f)));
+        d_list[2] = new xz_rect(0, 1000, 0, 1000, 0, new lambertian(vec3(200 / 255.f, 150 / 255.f, 123 / 255.f)));
+        d_list[3] = new xz_rect(0, 1000, 0, 1000, 81.6, new lambertian(vec3(200 / 255.f, 150 / 255.f, 123 / 255.f)));
+        
+        d_list[4] = new sphere(vec3(60, 13, 100.6), 13, new metal(vec3(0.999, 0.999, 0.999), 0));
+        d_list[5] = new sphere(vec3(128, 15, 110),  15, new dielectric(1.5));
+
+        d_list[6] = new sphere(vec3(80, 681.6 - 0.285, 115), 600, new diffuse_light(vec3(7, 7, 7)));
+
+        float sf = 60;
+
+        vec3 vase[] = {
+            vec3(0.27, 0, 0) * sf,
+            vec3(0.29, 0.1, 0) * sf,
+            vec3(0.33, 0.2, 0) * sf,
+            vec3(0.40, 0.4, 0) * sf,
+            vec3(0.36, 0.6, 0) * sf,
+            vec3(0.21, 0.72, 0) * sf,
+            vec3(0.3, 1, 0) * sf,
+        };
+
+        d_list[7] = // new sphere(vec3(70, 0, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
+                    // new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
+                    new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
+        *rand_state = local_rand_state;
+        *d_world  = new hitable_list(d_list, object_num);
+
+        vec3 lookfrom(140, 52, 180.6f);
+        vec3 lookat(50, 30, 50);
+        float dist_to_focus = 1;
+        float aperture = 0;
+        *d_camera   = new camera(lookfrom,
+                                 lookat,
+                                 vec3(0,1,0),
+                                 45,
+                                 float(nx)/float(ny),
+                                 aperture,
+                                 dist_to_focus);
+    }
+}
 
 __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camera) {
     for(int i=0; i < object_num; i++) {
@@ -218,10 +232,10 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
 
 int main() {
     int nx = 1600;
-    int ny = 1600;
-    int ns = 10000;
+    int ny = 900;
+    int ns = 100;
     int tx = 8;
-    int ty = 8;
+    int ty = 16;
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";

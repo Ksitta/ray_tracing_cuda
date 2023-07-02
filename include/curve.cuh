@@ -4,10 +4,7 @@
 #include "vec3.cuh"
 #include "hitable.cuh"
 #include "common.cuh"
-
-#include <thrust/device_vector.h>
-#include <thrust/binary_search.h>
-
+#include <vector>
 struct CurvePoint{
     vec3 v; // vertex
     vec3 t; // tangent (unit)
@@ -15,11 +12,14 @@ struct CurvePoint{
 
 class Curve : public hitable {
 public:
-    thrust::device_vector<vec3> controls;
-    thrust::device_vector<float> knot;
     int k;
     int n;
-    thrust::device_vector<float> tpad;
+    int controls_num;
+    int knot_num;
+    int tpad_num;
+    vec3* controls;
+    float* knot;
+    float* tpad;
 
     __device__ Curve(vec3 *points, int n){
         
@@ -49,9 +49,15 @@ public:
     
     __device__ virtual CurvePoint evaluate(float t){
         int bpos = getBPos(t);
-        std::vector<float> s(k + 2, 0);
+        float* s = new float[k + 2];
+        for (int i = 0; i < k + 2; i++){
+            s[i] = 0;
+        }
         s[k] = 1;
-        std::vector<float> ds(k + 1, 1);
+        float* ds = new float[k + 1];
+        for(int i = 0; i < k + 1; i++){
+            ds[i] = 1;
+        }
         for(int p = 1; p <= k; p++){
             for(int ii = k - p; ii <= k; ii++){
                 int i = ii + bpos - k;
@@ -85,19 +91,45 @@ public:
             ret += this->controls[i] * s[i - lsk];
             retd += this->controls[i] * ds[i - lsk];
         }
+        delete [] s;
+        delete [] ds;
         return CurvePoint{ret, retd};
     }
 
-    __device__ virtual void discretize(int resolution, std::vector<CurvePoint>& data) = 0;
-
     __device__ virtual void caculKnot() = 0;
+
+    __device__ int upper_bound(float *data, int n, float target){
+        int l = 0, r = n - 1;
+        while(l < r){
+            int mid = (l + r) / 2;
+            if(data[mid] <= target){
+                l = mid + 1;
+            }else{
+                r = mid;
+            }
+        }
+        return l;
+    }
+
+    __device__ int lower_bound(float *data, int n, float target){
+        int l = 0, r = n - 1;
+        while(l < r){
+            int mid = (l + r) / 2;
+            if(data[mid] < target){
+                l = mid + 1;
+            }else{
+                r = mid;
+            }
+        }
+        return l;
+    }
 
     __device__ int getBPos(float mu){
         int pos;
         if(mu == 0){
-            pos = thrust::upper_bound(knot.data(), knot.data() + knot.size(), mu) - knot.data() - 1;
+            pos = upper_bound(knot, knot_num, mu) - 1;
         }else{
-            pos = thrust::lower_bound(knot.data(), knot.data() + knot.size(), mu) - knot.data() - 1;
+            pos = lower_bound(knot, knot_num, mu) - 1;
             if(pos < 0){
                 pos = 0;
             }
@@ -114,33 +146,27 @@ public:
     __device__ BezierCurve(vec3 *points, int n) : Curve(points, n) {
         if (n < 4 || n % 3 != 1) {
             printf("Number of control points of BezierCurve must be 3n+1!\n");
-            exit(0);
+            return;
         }
         this->k = n - 1;
         this->n = n - 1;
+        this->controls = new vec3[n];
+        this->knot = new float[2 * (k + 1)];
+        this->tpad = new float[2 * (k + 1) + k];
         caculKnot();
-    }
-
-    __device__ void discretize(int resolution, std::vector<CurvePoint>& data) override {
-        data.clear();
-        // DONE (PA3): fill in data vector
-        for(int i = 0; i <= resolution; i++){
-            float t = float(i) / resolution;
-            data.push_back(evaluate(t));
-        }
     }
 
     __device__ void caculKnot(){
         for(int i = 0; i < k + 1; i++){
-            knot.push_back(0);
-            tpad.push_back(0);
+            knot[knot_num++] = 0;
+            tpad[tpad_num++] = 0;
         }
         for(int i = 0; i < k + 1; i++){
-            knot.push_back(1);
-            tpad.push_back(1);
+            knot[knot_num++] = 1;
+            tpad[tpad_num++] = 1;
         }
         for(int i = 0;i < k; i++){
-            tpad.push_back(1);
+            tpad[tpad_num++] = 1;
         }
     }
 

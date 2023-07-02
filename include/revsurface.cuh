@@ -25,26 +25,26 @@ class RevSurface : public hitable {
 public:
     __device__ RevSurface(const vec3& position, Curve *curve, material* matl) 
     : curve(curve), pos(position) {
-        height = vec3(curve->controls.back()).y() - vec3(curve->controls[0]).y();
+        height = curve->controls[curve->controls_num - 1].y() - curve->controls[0].y();
         maxR = getMaxRadius();
-        for (int i = 0; i < curve->controls.size(); i++){
+        for (int i = 0; i < curve->controls_num; i++){
             curve->controls[i] += pos;
         }
         outer = new Cylinder(maxR, height, pos, matl);
         this->mat = matl;
     }
 
-    float getMaxRadius() {
+    __device__ float getMaxRadius() {
         float max = 0;
-        for (auto i : curve->controls){
-            if (vec3(i).x() > max){
-                max = vec3(i).x();
+        for(int i = 0; i < curve->controls_num; i++){
+            if (curve->controls[i].x() > max){
+                max = curve->controls[i].x();
             }
         }
         return max;
     }
 
-    virtual bool intersect(const ray& r, hit_record& h, float t, float u, float v) const {
+    __device__ virtual bool intersect(const ray& r, hit_record& h, float t, float u, float v) const {
         float eps = 1e-4;
         for (int i = 0; i < 10; i++) {
             t = clamp(t, eps, inf);
@@ -65,7 +65,7 @@ public:
                     n.make_unit_vector();
                     // getUVOfRevsurface(rot_point, h.u, h.v, pos, height);
                     h.t = t;
-                    h.normal = n;
+                    h.set_face_normal(r, n);
                     h.p = rot_point;
                     h.mat_ptr = mat;
                     // h.set(t, n, rot_point, mat);
