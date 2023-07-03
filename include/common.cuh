@@ -11,6 +11,7 @@ const float inf = 1e20f;
 const float REACTOR = 1.5f;
 
 __device__ __host__ inline float clamp(float x, float a = 0, float b = 1) {
+    if(x != x) return 0;
     return x < a ? a : (x > b ? b : x);
 }
 

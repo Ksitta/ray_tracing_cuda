@@ -20,9 +20,21 @@ public:
     vec3* controls;
     float* knot;
     float* tpad;
+    float *s;
+    float *ds;
+    CurvePoint *eva;
+    constexpr static const float stride = 0.00001f;
+    constexpr static const int eva_size = int(1 / stride) + 1;
 
     __device__ Curve(vec3 *points, int n){
-        
+        this->controls_num = n;
+        this->knot_num = 0;
+        this->tpad_num = 0;
+        this->controls = new vec3[n];
+        for(int i = 0; i < n; i++){
+            this->controls[i] = points[i];
+        }
+        this->eva = new CurvePoint[eva_size];
     }
 
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
@@ -46,15 +58,24 @@ public:
         return -1;
     }
 
+    __device__ void prepare(){
+        for(int i = 0; i < eva_size; i++){
+            eva[i] = pre_evaluate(i * stride);
+        }
+    }
+
+    __device__ CurvePoint evaluate(float t){
+        return eva[int(t / stride)];
+    }
     
-    __device__ virtual CurvePoint evaluate(float t){
+    __device__ CurvePoint pre_evaluate(float t){
         int bpos = getBPos(t);
-        float* s = new float[k + 2];
+        
         for (int i = 0; i < k + 2; i++){
             s[i] = 0;
         }
         s[k] = 1;
-        float* ds = new float[k + 1];
+
         for(int i = 0; i < k + 1; i++){
             ds[i] = 1;
         }
@@ -91,8 +112,6 @@ public:
             ret += this->controls[i] * s[i - lsk];
             retd += this->controls[i] * ds[i - lsk];
         }
-        delete [] s;
-        delete [] ds;
         return CurvePoint{ret, retd};
     }
 
@@ -150,10 +169,12 @@ public:
         }
         this->k = n - 1;
         this->n = n - 1;
-        this->controls = new vec3[n];
         this->knot = new float[2 * (k + 1)];
         this->tpad = new float[2 * (k + 1) + k];
+        s = new float[k + 2];
+        ds = new float[k + 1];
         caculKnot();
+        prepare();
     }
 
     __device__ void caculKnot(){

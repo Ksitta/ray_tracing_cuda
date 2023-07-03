@@ -203,10 +203,18 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
         };
 
         d_list[7] = // new sphere(vec3(70, 0, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
-                    // new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
-                    new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
+                    new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
+                    // new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)));
         *rand_state = local_rand_state;
         *d_world  = new hitable_list(d_list, object_num);
+
+        // DEBUG CURVE
+        // Curve* curve = new BezierCurve(vase, 7);
+        // float ep = 1 / float(10000);
+        // for(int i = 0; i <= 10000; i++){
+        //     CurvePoint p = curve->evaluate(ep * i);
+        //     printf("(%f, %f ,%f), (%f, %f, %f)\n", p.v.x(), p.v.y(), p.v.z(), p.t.x(), p.t.y(), p.t.z());
+        // }
 
         vec3 lookfrom(140, 52, 180.6f);
         vec3 lookat(50, 30, 50);
@@ -269,7 +277,7 @@ int main() {
     create_world<<<1,1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-
+    // exit(1); // DEBUG
     clock_t start, stop;
     start = clock();
     // Render our buffer
