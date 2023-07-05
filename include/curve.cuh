@@ -42,19 +42,19 @@ public:
         return false;
     }
 
-    __device__ float solve(float y0){
+    __device__ float solve(float x0){
         float t = 0.5f;
-        float y;
-        float dy;
+        float x;
+        float dx;
         for (int i = 0; i < 10; i++){
             t = clamp(t);
             CurvePoint eval = evaluate(t);
-            y = eval.v.y() - y0;
-            dy = eval.t.y();
-            if (abs(y) < eps) {
+            x = eval.v.x() - x0;
+            dx = eval.t.x();
+            if (abs(x) < eps) {
                 return t;
             }
-            t -= y / dy;
+            t -= x / dx;
         }
         return -1;
     }

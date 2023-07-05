@@ -5,6 +5,7 @@
 #include "hitable.cuh"
 #include "vec3.cuh"
 #include "material.cuh"
+#include "circle.cuh"
 
 class Cylinder : public hitable {
 public:
@@ -13,6 +14,9 @@ public:
         this->radius = r;
         this->height = h;
         this->mat = m;
+        this->c1 = new xz_circle(_pos.x(), pos.z(), r, pos.y(), m);
+        this->c2 = new xz_circle(_pos.x(), pos.z(), r, pos.y() + h, m);
+        this->radius2 = r * r;
     }
 
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& h) const override {
@@ -26,6 +30,16 @@ public:
         float oz = pos.z() - r.origin().z();
 
         float a = rx * ox + rz * oz;
+
+        bool hit = false;
+        // if(c1->hit(r, t_min, t_max, h)){
+        //     t_max = h.t;
+        //     hit = true;
+        // }
+        // if(c2->hit(r, t_min, t_max, h)){
+        //     t_max = h.t;
+        //     hit = true;
+        // }
 
         if(a > eps){
             float rds = ox * ox + oz * oz - a * a;
@@ -46,14 +60,34 @@ public:
                 }
             }
         }
+        float len2 = ox * ox + oz * oz;
+        if(len2 < this->radius2){
+            float h2 = len2 - a * a;
+            float w2 = this->radius2 - h2;
+            float w = sqrt(w2);
+            float dis = w + a;
+            float t = dis / len;
+            vec3 p = r.point_at_parameter(t);
+            if(t > t_min && t < t_max && p.y() > pos.y() && p.y() < pos.y() + height){
+                vec3 n = vec3(p.x() - pos.x(), 0, p.z() - pos.z());
+                n.make_unit_vector();
+                h.set_face_normal(r, n);
+                h.t = t;
+                h.p = p;
+                h.mat_ptr = mat;
+                return true;
+            }
+        }
 
-        return false;
+        return hit;
     }
 
     float radius;
+    float radius2;
     float height;
     vec3 pos;
     material *mat;
+    xz_circle *c1, *c2;
 };
 
 #endif

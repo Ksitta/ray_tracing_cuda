@@ -44,7 +44,7 @@ public:
             vec3 diff = new_point - rot_point;
             float d = sqrt(point.z() * point.z() + point.x() * point.x());
             if (diff.squared_length() < eps){
-                if (t < t_max && t > t_min){ 
+                if (t < t_max && t > t_min && t > 0.1f){ 
                     vec3 du = rotateY(v, tangent);
                     vec3 dv = tangent_normal_disk(v, d);
                     vec3 n = cross(dv, du);
@@ -79,6 +79,9 @@ public:
         if (outer->hit(r, t_min, t_max, hc)){
             float t = hc.t;
             float u = (hc.p.y() - pos.y()) / height;
+            if(hc.p.y() == pos.y() || hc.p.y() == pos.y() + height){
+                u = curve->solve(hc.p.x() - pos.x());
+            }
             float v = atan2(hc.p.z() - pos.z(), hc.p.x() - pos.x());
             return intersect(r, h, t, u, v, t_min, t_max);
         }

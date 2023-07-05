@@ -241,7 +241,7 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
 int main() {
     int nx = 1600;
     int ny = 900;
-    int ns = 100;
+    int ns = 1000;
     int tx = 16;
     int ty = 16;
 
