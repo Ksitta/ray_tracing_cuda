@@ -5,3 +5,4 @@ out.ppm
 *.ppm
 **/.vscode
 build
+**/*.jpg

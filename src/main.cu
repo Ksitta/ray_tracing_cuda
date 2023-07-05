@@ -242,7 +242,7 @@ int main() {
     int nx = 1600;
     int ny = 900;
     int ns = 100;
-    int tx = 8;
+    int tx = 16;
     int ty = 16;
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";

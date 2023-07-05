@@ -23,7 +23,8 @@ public:
     float *s;
     float *ds;
     CurvePoint *eva;
-    constexpr static const float stride = 0.00001f;
+	float max_r;
+    constexpr static const float stride = 0.0001f;
     constexpr static const int eva_size = int(1 / stride) + 1;
 
     __device__ Curve(vec3 *points, int n){
@@ -59,8 +60,12 @@ public:
     }
 
     __device__ void prepare(){
+		max_r = 0;
         for(int i = 0; i < eva_size; i++){
             eva[i] = pre_evaluate(i * stride);
+			if(max_r < eva[i].v.x()){
+				max_r = eva[i].v.x();
+			}
         }
     }
 
