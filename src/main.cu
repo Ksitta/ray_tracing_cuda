@@ -16,6 +16,7 @@
 #include "common.cuh"
 #include "rect.cuh"
 #include "revsurface.cuh"
+#include "mesh.cuh"
 
 // Matching the C++ code would recurse enough into color() calls that
 // it was blowing up the stack, so we have to turn this into a
@@ -197,6 +198,13 @@ __device__ void add_object(hitable **d_list, hitable *object) {
 //     }
 // }
 
+__global__ void add_mesh(hitable **d_list, Triangle *triangles, int triangles_cnt){
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        // add_object(d_list, new Mesh(triangles, triangles_cnt, new metal(vec3(0.999, 0.999, 0.999), 0)));
+        add_object(d_list, new Mesh(triangles, triangles_cnt, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f))));
+    }
+}
+
 __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
@@ -217,11 +225,13 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
             vec3(0.21, 0.72, 0) * sf,
             vec3(0.3, 1, 0) * sf,
         };
-        add_object(d_list,
-                    // new sphere(vec3(70, 0, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
-                    new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
-                    // new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
-        );
+        // add_object(d_list,
+        //             // new sphere(vec3(70, 0, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
+        //             new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
+        //             // new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
+        // );
+
+        add_object(d_list, new Triangle(vec3(0, 21.213, 121.213), vec3(30, 21.213, 121.213), vec3(30, 42.426, 100), new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f))));
         *rand_state = local_rand_state;
         *d_world  = new hitable_list(d_list, object_num);
 
@@ -250,7 +260,7 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
 int main() {
     int nx = 1600;
     int ny = 900;
-    int ns = 1000;
+    int ns = 100;
     int tx = 16;
     int ty = 16;
 
@@ -262,6 +272,7 @@ int main() {
 
     // allocate FB
     vec3 *fb;
+
     checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
 
     // allocate random state
@@ -282,10 +293,20 @@ int main() {
     checkCudaErrors(cudaMalloc((void **)&d_world, sizeof(hitable *)));
     camera **d_camera;
     checkCudaErrors(cudaMalloc((void **)&d_camera, sizeof(camera *)));
+
+
+    // Add object here
+    Triangle *triangles;
+    int triangle_num;
+    // read_mesh("../mesh/cube3.obj", &triangles, &triangle_num);
+    // add_mesh<<<1, 1>>>(d_list, triangles, triangle_num);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
     create_world<<<1,1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    // exit(1); // DEBUG
+
     clock_t start, stop;
     start = clock();
     // Render our buffer
