@@ -7,19 +7,19 @@
 #include "material.cuh"
 #include "circle.cuh"
 
-class Cylinder : public hitable {
+class Cylinder : public Hitable {
 public:
-    __device__ Cylinder(float r, float h,const vec3& _pos, material* m) {
+    __device__ Cylinder(float r, float h,const Vec3& _pos, Material* m) {
         this->pos = _pos;
         this->radius = r;
         this->height = h;
         this->mat = m;
-        this->c1 = new xz_circle(_pos.x(), pos.z(), r, pos.y(), m);
-        this->c2 = new xz_circle(_pos.x(), pos.z(), r, pos.y() + h, m);
+        this->c1 = new XZCircle(_pos.x(), pos.z(), r, pos.y(), m);
+        this->c2 = new XZCircle(_pos.x(), pos.z(), r, pos.y() + h, m);
         this->radius2 = r * r;
     }
 
-    __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& h) const override {
+    __device__ virtual bool hit(const ray& r, float t_min, float t_max, HitRecord& h) const override {
         float rx = r.direction().x();
         float rz = r.direction().z();
         float len = sqrt(rx * rx + rz * rz);
@@ -48,9 +48,9 @@ public:
                 float inner = sqrt(rads - rds);
                 float dis = a - inner;
                 float t = dis / len;
-                vec3 p = r.point_at_parameter(t);
+                Vec3 p = r.point_at_parameter(t);
                 if(t > t_min && t < t_max && p.y() > pos.y() && p.y() < pos.y() + height){
-                    vec3 n = vec3(p.x() - pos.x(), 0, p.z() - pos.z());
+                    Vec3 n = Vec3(p.x() - pos.x(), 0, p.z() - pos.z());
                     n.make_unit_vector();
                     h.set_face_normal(r, n);
                     h.t = t;
@@ -67,9 +67,9 @@ public:
             float w = sqrt(w2);
             float dis = w + a;
             float t = dis / len;
-            vec3 p = r.point_at_parameter(t);
+            Vec3 p = r.point_at_parameter(t);
             if(t > t_min && t < t_max && p.y() > pos.y() && p.y() < pos.y() + height){
-                vec3 n = vec3(p.x() - pos.x(), 0, p.z() - pos.z());
+                Vec3 n = Vec3(p.x() - pos.x(), 0, p.z() - pos.z());
                 n.make_unit_vector();
                 h.set_face_normal(r, n);
                 h.t = t;
@@ -85,9 +85,9 @@ public:
     float radius;
     float radius2;
     float height;
-    vec3 pos;
-    material *mat;
-    xz_circle *c1, *c2;
+    Vec3 pos;
+    Material *mat;
+    XZCircle *c1, *c2;
 };
 
 #endif

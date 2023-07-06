@@ -13,14 +13,14 @@
 #include <vector>
 #include <algorithm>
 
-class Mesh : public hitable {
+class Mesh : public Hitable {
 
 public:
     Triangle *triangles;
     int num_triangles;
-    material *mat_ptr;
+    Material *mat_ptr;
 
-    __device__ Mesh(Triangle *trians, int n, material *m){
+    __device__ Mesh(Triangle *trians, int n, Material *m){
         triangles = new Triangle[n];
         num_triangles = n;
         mat_ptr = m;
@@ -29,8 +29,8 @@ public:
         }
     }
 
-    __device__ bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-        hit_record temp_rec;
+    __device__ bool hit(const ray& r, float t_min, float t_max, HitRecord& rec) const {
+        HitRecord temp_rec;
         bool hit_anything = false;
         float closest_so_far = t_max;
 
@@ -60,9 +60,9 @@ inline void read_mesh(std::string filename, Triangle **d_triangles, int *num_tri
         int x[3]{};
     };
 
-    std::vector<vec3> v;
+    std::vector<Vec3> v;
     std::vector<TriangleIndex> t;
-    std::vector<vec3> n;
+    std::vector<Vec3> n;
     std::vector<Triangle> triangles;
 
     std::ifstream f;
@@ -92,7 +92,7 @@ inline void read_mesh(std::string filename, Triangle **d_triangles, int *num_tri
         std::stringstream ss(line);
         ss >> tok;
         if (tok == vTok) {
-            vec3 vec;
+            Vec3 vec;
             ss >> vec[0] >> vec[1] >> vec[2];
             v.push_back(vec);
         } else if (tok == fTok) {

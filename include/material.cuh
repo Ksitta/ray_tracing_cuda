@@ -1,7 +1,7 @@
 #ifndef MATERIALH
 #define MATERIALH
 
-struct hit_record;
+struct HitRecord;
 
 #include "ray.cuh"
 #include "hitable.cuh"
@@ -15,8 +15,8 @@ __device__ float schlick(float cosine, float ref_idx) {
     return r0 + (1.0f-r0)*pow((1.0f - cosine),5.0f);
 }
 
-__device__ bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& refracted) {
-    vec3 uv = unit_vector(v);
+__device__ bool refract(const Vec3& v, const Vec3& n, float ni_over_nt, Vec3& refracted) {
+    Vec3 uv = unit_vector(v);
     float dt = dot(uv, n);
     float discriminant = 1.0f - ni_over_nt*ni_over_nt*(1-dt*dt);
     if (discriminant > 0) {
@@ -27,34 +27,34 @@ __device__ bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& re
         return false;
 }
 
-#define RANDVEC3 vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),curand_uniform(local_rand_state))
+#define RANDVEC3 Vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),curand_uniform(local_rand_state))
 
-__device__ vec3 random_in_unit_sphere(curandState *local_rand_state) {
-    vec3 p;
+__device__ Vec3 random_in_unit_sphere(curandState *local_rand_state) {
+    Vec3 p;
     do {
-        p = 2.0f*RANDVEC3 - vec3(1,1,1);
+        p = 2.0f*RANDVEC3 - Vec3(1,1,1);
     } while (p.squared_length() >= 1.0f);
     return p;
 }
 
-__device__ vec3 reflect(const vec3& v, const vec3& n) {
+__device__ Vec3 reflect(const Vec3& v, const Vec3& n) {
      return v - 2.0f*dot(v,n)*n;
 }
 
-class material  {
+class Material  {
     public:
-        __device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState *local_rand_state) const = 0;
-        __device__ virtual vec3 emitted(float u, float v, const vec3& p) const {
-            return vec3(0,0,0);
+        __device__ virtual bool scatter(const ray& r_in, const HitRecord& rec, Vec3& attenuation, ray& scattered, curandState *local_rand_state) const = 0;
+        __device__ virtual Vec3 emitted(float u, float v, const Vec3& p) const {
+            return Vec3(0,0,0);
         }
 };
 
-class lambertian : public material {
+class Lambertian : public Material {
     public:
-        __device__ lambertian(vec3 a) : albedo(new solid_color(a)) {}
-        __device__ lambertian(texture *a) : albedo(a) {}
-        __device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState *local_rand_state) const  {
-             vec3 target = rec.p + rec.normal + random_in_unit_sphere(local_rand_state);
+        __device__ Lambertian(Vec3 a) : albedo(new solid_color(a)) {}
+        __device__ Lambertian(texture *a) : albedo(a) {}
+        __device__ virtual bool scatter(const ray& r_in, const HitRecord& rec, Vec3& attenuation, ray& scattered, curandState *local_rand_state) const  {
+             Vec3 target = rec.p + rec.normal + random_in_unit_sphere(local_rand_state);
              scattered = ray(rec.p, target-rec.p, r_in.time());
              attenuation = albedo->value(rec.u, rec.v, rec.p);
              return true;
@@ -62,32 +62,32 @@ class lambertian : public material {
         texture* albedo;
 };
 
-class metal : public material {
+class Metal : public Material {
     public:
-        __device__ metal(const vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1; }
-        __device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState *local_rand_state) const  {
-            vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+        __device__ Metal(const Vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1; }
+        __device__ virtual bool scatter(const ray& r_in, const HitRecord& rec, Vec3& attenuation, ray& scattered, curandState *local_rand_state) const  {
+            Vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
             scattered = ray(rec.p, reflected + fuzz*random_in_unit_sphere(local_rand_state), r_in.time());
             attenuation = albedo;
             return (dot(scattered.direction(), rec.normal) > 0.0f);
         }
-        vec3 albedo;
+        Vec3 albedo;
         float fuzz;
 };
 
-class dielectric : public material {
+class Dielectric : public Material {
 public:
-    __device__ dielectric(float ri) : ref_idx(ri) {}
+    __device__ Dielectric(float ri) : ref_idx(ri) {}
     __device__ virtual bool scatter(const ray& r_in,
-                         const hit_record& rec,
-                         vec3& attenuation,
+                         const HitRecord& rec,
+                         Vec3& attenuation,
                          ray& scattered,
                          curandState *local_rand_state) const  {
-        vec3 outward_normal;
-        vec3 reflected = reflect(r_in.direction(), rec.normal);
+        Vec3 outward_normal;
+        Vec3 reflected = reflect(r_in.direction(), rec.normal);
         float ni_over_nt;
-        attenuation = vec3(1.0f, 1.0f, 1.0f);
-        vec3 refracted;
+        attenuation = Vec3(1.0f, 1.0f, 1.0f);
+        Vec3 refracted;
         float reflect_prob;
         float cosine;
         if (dot(r_in.direction(), rec.normal) > 0.0f) {
@@ -115,21 +115,21 @@ public:
     float ref_idx;
 };
 
-class diffuse_light : public material  {
+class DiffuseLight : public Material  {
     public:
-        __device__ diffuse_light(vec3 a) : color(a) {}
+        __device__ DiffuseLight(Vec3 a) : color(a) {}
 
         __device__ virtual bool scatter(
-            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState *local_rand_state
+            const ray& r_in, const HitRecord& rec, Vec3& attenuation, ray& scattered, curandState *local_rand_state
         ) const override {
             return false;
         }
 
-        __device__ virtual vec3 emitted(float u, float v, const vec3& p) const override {
+        __device__ virtual Vec3 emitted(float u, float v, const Vec3& p) const override {
             // printf("emitted\n");
             return color;
         }
-        vec3 color;
+        Vec3 color;
 };
 
 #endif

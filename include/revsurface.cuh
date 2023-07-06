@@ -6,7 +6,7 @@
 #include "cylinder.cuh"
 #include "common.cuh"
 
-__device__ inline void getUVOfRevsurface(const vec3& p, float& u, float& v, const vec3& pole, float height){
+__device__ inline void getUVOfRevsurface(const Vec3& p, float& u, float& v, const Vec3& pole, float height){
     float dx = p.x() - pole.x();
     float dy = p.y() - pole.y();
     float dz = p.z() - pole.z();
@@ -15,15 +15,15 @@ __device__ inline void getUVOfRevsurface(const vec3& p, float& u, float& v, cons
     v = dy / height;
 }
 
-class RevSurface : public hitable {
+class RevSurface : public Hitable {
     Curve *curve;
     float height;
     float maxR;
-    vec3 pos;
+    Vec3 pos;
     Cylinder *outer;
-    material *mat;
+    Material *mat;
 public:
-    __device__ RevSurface(const vec3& position, Curve *curve, material* matl) 
+    __device__ RevSurface(const Vec3& position, Curve *curve, Material* matl) 
     : curve(curve), pos(position) {
         height = curve->controls[curve->controls_num - 1].y() - curve->controls[0].y();
         maxR = curve->max_r;
@@ -31,23 +31,23 @@ public:
         this->mat = matl;
     }
 
-    __device__ virtual bool intersect(const ray& r, hit_record& h, float t, float u, float v, float t_min, float t_max) const {
+    __device__ virtual bool intersect(const ray& r, HitRecord& h, float t, float u, float v, float t_min, float t_max) const {
         float eps = 1e-4f;
         for (int i = 0; i < 10; i++) {
             t = clamp(t, eps, inf);
             u = clamp(u, 0, 1);
             CurvePoint eval = curve->evaluate(u);
-            vec3 point = eval.v;
-            vec3 tangent = eval.t;
-            vec3 rot_point = rotateY(v, point) + pos;
-            vec3 new_point = r.point_at_parameter(t);
-            vec3 diff = new_point - rot_point;
+            Vec3 point = eval.v;
+            Vec3 tangent = eval.t;
+            Vec3 rot_point = rotateY(v, point) + pos;
+            Vec3 new_point = r.point_at_parameter(t);
+            Vec3 diff = new_point - rot_point;
             float d = sqrt(point.z() * point.z() + point.x() * point.x());
             if (diff.squared_length() < eps){
                 if (t < t_max && t > t_min && t > 0.1f){ 
-                    vec3 du = rotateY(v, tangent);
-                    vec3 dv = tangent_normal_disk(v, d);
-                    vec3 n = cross(dv, du);
+                    Vec3 du = rotateY(v, tangent);
+                    Vec3 dv = tangent_normal_disk(v, d);
+                    Vec3 n = cross(dv, du);
                     n.make_unit_vector();
                     getUVOfRevsurface(rot_point, h.u, h.v, pos, height);
                     h.t = t;
@@ -60,10 +60,10 @@ public:
                     return false;
                 }
             }
-            vec3 dir = r.direction();
-            vec3 du = rotateY(v, tangent);
-            vec3 dv = tangent_normal_disk(v, d);
-            vec3 dF = -diff;
+            Vec3 dir = r.direction();
+            Vec3 du = rotateY(v, tangent);
+            Vec3 dv = tangent_normal_disk(v, d);
+            Vec3 dF = -diff;
             float D = dot(dir, cross(du, dv));
             u += dot(dir, cross(dv, dF)) / D;
             v -= dot(dir, cross(du, dF)) / D;
@@ -74,8 +74,8 @@ public:
         return false;
     }
 
-    __device__ virtual bool hit(const ray &r, float t_min, float t_max, hit_record &h) const override {
-        hit_record hc;
+    __device__ virtual bool hit(const ray &r, float t_min, float t_max, HitRecord &h) const override {
+        HitRecord hc;
         if (outer->hit(r, t_min, t_max, hc)){
             float t = hc.t;
             float u = (hc.p.y() - pos.y()) / height;

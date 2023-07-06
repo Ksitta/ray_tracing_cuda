@@ -3,15 +3,15 @@
 
 #include "hitable.cuh"
 
-class xz_circle : public hitable {
+class XZCircle : public Hitable {
     public:
-        __device__ xz_circle() {}
+        __device__ XZCircle() {}
 
-        __device__ xz_circle(float x, float y, float rad, float _k,
-            material* mat)
+        __device__ XZCircle(float x, float y, float rad, float _k,
+            Material* mat)
             : x(x), z(z), k(_k), mp(mat), rad(rad) { rad2 = rad * rad; };
 
-        __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override{
+        __device__ virtual bool hit(const ray& r, float t_min, float t_max, HitRecord& rec) const override{
             float t = (k-r.origin().y()) / r.direction().y();
             if (t < t_min || t > t_max)
                 return false;
@@ -22,7 +22,7 @@ class xz_circle : public hitable {
             if (dx * dx + dz * dz > rad2)
                 return false;
             rec.t = t;
-            vec3 outward_normal = vec3(0, 1, 0);
+            Vec3 outward_normal = Vec3(0, 1, 0);
             rec.set_face_normal(r, outward_normal);
             rec.mat_ptr = mp;
             rec.p = r.point_at_parameter(t);
@@ -31,7 +31,7 @@ class xz_circle : public hitable {
 
 
     public:
-        material* mp;
+        Material* mp;
         float x;
         float z;
         float rad;

@@ -6,18 +6,18 @@
 #include "common.cuh"
 #include <vector>
 struct CurvePoint{
-    vec3 v; // vertex
-    vec3 t; // tangent (unit)
+    Vec3 v; // vertex
+    Vec3 t; // tangent (unit)
 };
 
-class Curve : public hitable {
+class Curve : public Hitable {
 public:
     int k;
     int n;
     int controls_num;
     int knot_num;
     int tpad_num;
-    vec3* controls;
+    Vec3* controls;
     float* knot;
     float* tpad;
     float *s;
@@ -27,18 +27,18 @@ public:
     constexpr static const float stride = 0.0001f;
     constexpr static const int eva_size = int(1 / stride) + 1;
 
-    __device__ Curve(vec3 *points, int n){
+    __device__ Curve(Vec3 *points, int n){
         this->controls_num = n;
         this->knot_num = 0;
         this->tpad_num = 0;
-        this->controls = new vec3[n];
+        this->controls = new Vec3[n];
         for(int i = 0; i < n; i++){
             this->controls[i] = points[i];
         }
         this->eva = new CurvePoint[eva_size];
     }
 
-    __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
+    __device__ virtual bool hit(const ray& r, float t_min, float t_max, HitRecord& rec) const {
         return false;
     }
 
@@ -108,7 +108,7 @@ public:
                 s[ii] = w1 * s[ii] + w2 * s[ii + 1];
             }
         }
-        vec3 ret(0,0,0), retd(0,0,0);
+        Vec3 ret(0,0,0), retd(0,0,0);
         int lsk = bpos - k;
         int rsk = n - bpos;
         int le = max(0, lsk);
@@ -167,7 +167,7 @@ public:
 class BezierCurve : public Curve {
 public:
 
-    __device__ BezierCurve(vec3 *points, int n) : Curve(points, n) {
+    __device__ BezierCurve(Vec3 *points, int n) : Curve(points, n) {
         if (n < 4 || n % 3 != 1) {
             printf("Number of control points of BezierCurve must be 3n+1!\n");
             return;

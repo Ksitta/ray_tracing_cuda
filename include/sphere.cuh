@@ -3,12 +3,12 @@
 
 #include "hitable.cuh"
 
-class sphere: public hitable  {
+class Sphere: public Hitable  {
     public:
-        __device__ sphere() {}
-        __device__ sphere(vec3 cen, float r, material *m) : center(cen), radius(r), mat_ptr(m)  {};
-        __device__ virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec) const;
-        __device__ static void get_sphere_uv(const vec3& p, float& u, float& v) {
+        __device__ Sphere() {}
+        __device__ Sphere(Vec3 cen, float r, Material *m) : center(cen), radius(r), mat_ptr(m)  {};
+        __device__ virtual bool hit(const ray& r, float tmin, float tmax, HitRecord& rec) const;
+        __device__ static void get_sphere_uv(const Vec3& p, float& u, float& v) {
             // p: a given point on the sphere of radius one, centered at the origin.
             // u: returned value [0,1] of angle around the Y axis from X=-1.
             // v: returned value [0,1] of angle from Y=-1 to Y=+1.
@@ -22,13 +22,13 @@ class sphere: public hitable  {
             u = phi / (2*PI);
             v = theta / PI;
         }
-        vec3 center;
+        Vec3 center;
         float radius;
-        material *mat_ptr;
+        Material *mat_ptr;
 };
 
-__device__ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-    vec3 oc = r.origin() - center;
+__device__ bool Sphere::hit(const ray& r, float t_min, float t_max, HitRecord& rec) const {
+    Vec3 oc = r.origin() - center;
     float a = dot(r.direction(), r.direction());
     float b = dot(oc, r.direction());
     float c = dot(oc, oc) - radius*radius;

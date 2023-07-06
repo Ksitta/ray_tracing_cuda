@@ -4,14 +4,14 @@
 #include "hitable.cuh"
 #include "common.cuh"
 
-class Triangle: public hitable {
+class Triangle: public Hitable {
 public:
-	material *mat_ptr;
-	vec3 normal;
-	vec3 vertices[3];
-    vec3 e1, e2;
+	Material *mat_ptr;
+	Vec3 normal;
+	Vec3 vertices[3];
+    Vec3 e1, e2;
     // a b c are three vertex positions of the triangle
-	__host__ __device__ Triangle( const vec3 & a, const vec3 & b, const vec3 & c, material* m) : mat_ptr(m) {
+	__host__ __device__ Triangle( const Vec3 & a, const Vec3 & b, const Vec3 & c, Material* m) : mat_ptr(m) {
 		this->vertices[0] = a;
 		this->vertices[1] = b;
 		this->vertices[2] = c;
@@ -23,7 +23,7 @@ public:
 
 	__device__ Triangle() {};
 
-	__device__ void set(const Triangle & a, material *mat) {
+	__device__ void set(const Triangle & a, Material *mat) {
 		this->vertices[0] = a.vertices[0];
 		this->vertices[1] = a.vertices[1];
 		this->vertices[2] = a.vertices[2];
@@ -33,10 +33,10 @@ public:
 		this->mat_ptr = mat;
 	}
 
-	__device__ bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override {
-		vec3 s = r.origin() - this->vertices[0];
-	    vec3 s1 = cross(r.dir, e2);
-    	vec3 s2 = cross(s, e1);
+	__device__ bool hit(const ray& r, float t_min, float t_max, HitRecord& rec) const override {
+		Vec3 s = r.origin() - this->vertices[0];
+	    Vec3 s1 = cross(r.dir, e2);
+    	Vec3 s2 = cross(s, e1);
 
 		float s1e1 = dot(s1, e1);
 		float t = dot(s2, e2) / s1e1;

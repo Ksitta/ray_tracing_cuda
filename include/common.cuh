@@ -15,14 +15,14 @@ __device__ __host__ inline float clamp(float x, float a = 0, float b = 1) {
     return x < a ? a : (x > b ? b : x);
 }
 
-__device__ __host__ inline vec3 rotateY(float theta, const vec3& p){
+__device__ __host__ inline Vec3 rotateY(float theta, const Vec3& p){
     float sin_theta = sin(theta);
     float cos_theta = cos(theta);
-    return vec3(cos_theta * p.x() - sin_theta * p.z(), p.y(), sin_theta * p.x() + cos_theta * p.z());
+    return Vec3(cos_theta * p.x() - sin_theta * p.z(), p.y(), sin_theta * p.x() + cos_theta * p.z());
 }
 
-__device__ inline vec3 tangent_normal_disk(float theta, float R){
-    return R * vec3(-sin(theta), 0, cos(theta));
+__device__ inline Vec3 tangent_normal_disk(float theta, float R){
+    return R * Vec3(-sin(theta), 0, cos(theta));
 }
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples

@@ -3,17 +3,17 @@
 
 #include "hitable.cuh"
 
-class hitable_list: public hitable  {
+class HittableList: public Hitable  {
     public:
-        __device__ hitable_list() {}
-        __device__ hitable_list(hitable **l, int n) {list = l; list_size = n; }
-        __device__ virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec) const;
-        hitable **list;
+        __device__ HittableList() {}
+        __device__ HittableList(Hitable **l, int n) {list = l; list_size = n; }
+        __device__ virtual bool hit(const ray& r, float tmin, float tmax, HitRecord& rec) const;
+        Hitable **list;
         int list_size;
 };
 
-__device__ bool hitable_list::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-        hit_record temp_rec;
+__device__ bool HittableList::hit(const ray& r, float t_min, float t_max, HitRecord& rec) const {
+        HitRecord temp_rec;
         bool hit_anything = false;
         float closest_so_far = t_max;
         for (int i = 0; i < list_size; i++) {

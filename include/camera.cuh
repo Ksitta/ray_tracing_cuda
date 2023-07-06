@@ -8,19 +8,19 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-__device__ vec3 random_in_unit_disk(curandState *local_rand_state) {
-    vec3 p;
+__device__ Vec3 random_in_unit_disk(curandState *local_rand_state) {
+    Vec3 p;
     do {
-        p = 2.0f*vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),0) - vec3(1,1,0);
+        p = 2.0f*Vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),0) - Vec3(1,1,0);
     } while (dot(p,p) >= 1.0f);
     return p;
 }
 
-class camera {
+class Camera {
 public:
-    __device__ camera(vec3 lookfrom, 
-    vec3 lookat, 
-    vec3 vup, 
+    __device__ Camera(Vec3 lookfrom, 
+    Vec3 lookat, 
+    Vec3 vup, 
     float vfov, 
     float aspect, 
     float aperture, 
@@ -42,19 +42,19 @@ public:
         time1 = _time1;
     }
     __device__ ray get_ray(float s, float t, curandState *local_rand_state) {
-        vec3 rd = lens_radius*random_in_unit_disk(local_rand_state);
-        vec3 offset = u * rd.x() + v * rd.y();
+        Vec3 rd = lens_radius*random_in_unit_disk(local_rand_state);
+        Vec3 offset = u * rd.x() + v * rd.y();
         return ray(origin + offset, 
         lower_left_corner + s*horizontal + t*vertical - origin - offset,
         curand_uniform(local_rand_state)
         );
     }
 
-    vec3 origin;
-    vec3 lower_left_corner;
-    vec3 horizontal;
-    vec3 vertical;
-    vec3 u, v, w;
+    Vec3 origin;
+    Vec3 lower_left_corner;
+    Vec3 horizontal;
+    Vec3 vertical;
+    Vec3 u, v, w;
     float lens_radius;
     float time0, time1;
 };
