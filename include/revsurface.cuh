@@ -49,7 +49,7 @@ public:
                     vec3 dv = tangent_normal_disk(v, d);
                     vec3 n = cross(dv, du);
                     n.make_unit_vector();
-                    // getUVOfRevsurface(rot_point, h.u, h.v, pos, height);
+                    getUVOfRevsurface(rot_point, h.u, h.v, pos, height);
                     h.t = t;
                     h.set_face_normal(r, n);
                     h.p = rot_point;

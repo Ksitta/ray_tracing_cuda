@@ -6,3 +6,5 @@ out.ppm
 **/.vscode
 build
 **/*.jpg
+imgs
+mesh

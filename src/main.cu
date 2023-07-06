@@ -92,6 +92,9 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 __device__ int object_num = 0;
 const int max_num_hitables = 1000;
 hitable **d_list;
+__device__ int texture_num = 0;
+const int max_num_texture = 1000;
+texture **d_texturelist;
 // __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
 //     if (threadIdx.x == 0 && blockIdx.x == 0) {
 //         curandState local_rand_state = *rand_state;
@@ -201,11 +204,11 @@ __device__ void add_object(hitable **d_list, hitable *object) {
 __global__ void add_mesh(hitable **d_list, Triangle *triangles, int triangles_cnt){
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         // add_object(d_list, new Mesh(triangles, triangles_cnt, new metal(vec3(0.999, 0.999, 0.999), 0)));
-        add_object(d_list, new Mesh(triangles, triangles_cnt, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f))));
+        add_object(d_list, new Mesh(triangles, triangles_cnt, new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f))));
     }
 }
 
-__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
+__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state, texture **d_tex) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
 
@@ -213,7 +216,11 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
         add_object(d_list, new xy_rect(0, 1000, 0, 1000, 0, new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f))));
         add_object(d_list, new xz_rect(0, 1000, 0, 1000, 0, new lambertian(vec3(200 / 255.f, 150 / 255.f, 123 / 255.f))));
         add_object(d_list, new xz_rect(0, 1000, 0, 1000, 81.6, new lambertian(vec3(200 / 255.f, 150 / 255.f, 123 / 255.f))));
-        add_object(d_list, new sphere(vec3(80, 681.6 - 0.285, 115), 600, new diffuse_light(vec3(7, 7, 7))));
+        add_object(d_list, new sphere(vec3(80, 681.6 - 0.285, 115), 600, new diffuse_light(vec3(10, 10, 10))));
+
+        add_object(d_list, new sphere(vec3(60, 13, 100.6), 13, new metal(vec3(0.999, 0.999, 0.999), 0)));
+        add_object(d_list, new sphere(vec3(128, 15, 110), 15, new dielectric(1.5)));
+
         float sf = 60;
 
         vec3 vase[] = {
@@ -225,13 +232,13 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
             vec3(0.21, 0.72, 0) * sf,
             vec3(0.3, 1, 0) * sf,
         };
-        // add_object(d_list,
-        //             // new sphere(vec3(70, 0, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
-        //             new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
-        //             // new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
-        // );
+        add_object(d_list,
+                    // new sphere(vec3(70, 0, 55), 19.8, new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
+                    new RevSurface(vec3(70, -5, 55), new BezierCurve(vase, 7), new lambertian(d_tex[0]))
+                    // new Cylinder(24, 60, vec3(70, -5, 55), new lambertian(vec3(117 / 255.f,190 / 255.f, 204 / 255.f)))
+        );
 
-        add_object(d_list, new Triangle(vec3(0, 21.213, 121.213), vec3(30, 21.213, 121.213), vec3(30, 42.426, 100), new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f))));
+        // add_object(d_list, new Triangle(vec3(0, 21.213, 121.213), vec3(30, 21.213, 121.213), vec3(30, 42.426, 100), new lambertian(vec3(220 / 255.f, 174 / 255.f, 185 / 255.f))));
         *rand_state = local_rand_state;
         *d_world  = new hitable_list(d_list, object_num);
 
@@ -255,6 +262,30 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
     }
     delete *d_world;
     delete *d_camera;
+}
+
+__global__ void add_texture_to_list(texture **d_list, unsigned char *data, int width, int height) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        d_list[texture_num++] = new ImageTexture(data, width, height);
+    }
+}
+
+void add_texture(const char* filename, texture **d_list){
+    int components_per_pixel = 3;
+    int height, width;
+    unsigned char *data = stbi_load(
+                filename, &width, &height, &components_per_pixel, components_per_pixel);
+    unsigned char *d_data;
+    if (!data) {
+        std::cerr << "ERROR: Could not load Texture image file '" << filename << "'.\n";
+        width = height = 0;
+        exit(1);
+    }
+
+    checkCudaErrors(cudaMalloc((void**)&d_data, width * height * components_per_pixel * sizeof(unsigned char)));
+    checkCudaErrors(cudaMemcpy(d_data, data, width * height * components_per_pixel * sizeof(unsigned char), cudaMemcpyHostToDevice));
+    free(data);
+    add_texture_to_list<<<1, 1>>>(d_list, d_data, width, height);
 }
 
 int main() {
@@ -294,16 +325,17 @@ int main() {
     camera **d_camera;
     checkCudaErrors(cudaMalloc((void **)&d_camera, sizeof(camera *)));
 
+    checkCudaErrors(cudaMalloc((void **)&d_texturelist, max_num_texture * sizeof(texture *)));
 
     // Add object here
     Triangle *triangles;
     int triangle_num;
-    // read_mesh("../mesh/cube3.obj", &triangles, &triangle_num);
-    // add_mesh<<<1, 1>>>(d_list, triangles, triangle_num);
+    read_mesh("../mesh/cube.obj", &triangles, &triangle_num);
+    add_mesh<<<1, 1>>>(d_list, triangles, triangle_num);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-
-    create_world<<<1,1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2);
+    add_texture("../imgs/2.jpg", d_texturelist);
+    create_world<<<1,1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2, d_texturelist);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 

@@ -2,6 +2,7 @@
 #define TEXTURE_H
 
 #include "common.cuh"
+#include "stb_image.h"
 
 class texture {
     public:
@@ -45,6 +46,58 @@ class checker_texture : public texture {
     public:
         texture* odd;
         texture* even;
+};
+
+
+class ImageTexture : public texture {
+    public:
+        const static int bytes_per_pixel = 3;
+
+        ImageTexture()
+          : data(nullptr), width(0), height(0), bytes_per_scanline(0) {}
+
+        __device__ ImageTexture(unsigned char* pixels, int width, int height)
+          : data(pixels), width(width), height(height), bytes_per_scanline(width * bytes_per_pixel) {}
+
+        ImageTexture(const char* filename) {
+            auto components_per_pixel = bytes_per_pixel;
+
+            data = stbi_load(
+                filename, &width, &height, &components_per_pixel, components_per_pixel);
+
+            if (!data) {
+                std::cerr << "ERROR: Could not load Texture image file '" << filename << "'.\n";
+                width = height = 0;
+            }
+
+            bytes_per_scanline = bytes_per_pixel * width;
+        }
+
+        __device__ virtual vec3 value(float u, float v, const vec3& p) const override {
+
+            if (data == nullptr){
+                return vec3(0,1,1);
+            }
+
+            u = clamp(u, 0.0, 1.0);
+            v = 1.0 - clamp(v, 0.0, 1.0); 
+
+            auto i = int(u * width);
+            auto j = int(v * height);
+
+            if (i >= width)  i = width - 1;
+            if (j >= height) j = height - 1;
+
+            double color_scale = 1.0 / 255.0;
+            auto pixel = data + j * bytes_per_scanline + i * bytes_per_pixel;
+
+            return vec3(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
+        }
+
+    private:
+        unsigned char *data;
+        int width, height;
+        int bytes_per_scanline;
 };
 
 #endif

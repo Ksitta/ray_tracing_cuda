@@ -3,7 +3,6 @@
 
 #include "hitable.cuh"
 #include "common.cuh"
-#include "mat3.cuh"
 
 class Triangle: public hitable {
 public:
@@ -16,8 +15,8 @@ public:
 		this->vertices[0] = a;
 		this->vertices[1] = b;
 		this->vertices[2] = c;
-        this->e1 = a - b;
-        this->e2 = a - c;
+        this->e1 = b - a;
+        this->e2 = c - a;
 		this->normal = cross(e1, e2);
 		this->normal.make_unit_vector();
 	}
@@ -35,29 +34,24 @@ public:
 	}
 
 	__device__ bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override {
-		float t, b_pos, r_pos;
-		vec3 dir = r.dir;
-		dir.make_unit_vector();
-		vec3 s = this->vertices[0] - r.origin();
-		mat3 det0(dir, this->e1, this->e2);
-		mat3 det1(s, this->e1, this->e2);
-		mat3 det2(dir, s, this->e2);
-		mat3 det3(dir, this->e1, s);
-		float tem = det0.determinant();
-		if(tem == 0){
-			return false;
+		vec3 s = r.origin() - this->vertices[0];
+	    vec3 s1 = cross(r.dir, e2);
+    	vec3 s2 = cross(s, e1);
+
+		float s1e1 = dot(s1, e1);
+		float t = dot(s2, e2) / s1e1;
+		float b1 = dot(s1, s) / s1e1;
+		float b2 = dot(s2, r.dir) / s1e1;
+
+		if (b1 >= 0.f && b2 >= 0.f && (b1 + b2) <= 1.f && t >= t_min && t <= t_max) {
+			rec.t = t;
+			rec.mat_ptr = this->mat_ptr;
+			rec.set_face_normal(r, normal);
+			rec.p = r.point_at_parameter(t);
+			return true;
 		}
-		t = det1.determinant() / tem;
-		b_pos = det2.determinant() / tem;
-		r_pos = det3.determinant() / tem;
-		if(t < t_min || b_pos < 0 || b_pos > 1 || r_pos < 0 || r_pos > 1 || b_pos + r_pos > 1 || t > t_max){
-			return false;
-		}
-		rec.t = t;
-		rec.mat_ptr = this->mat_ptr;
-		rec.set_face_normal(r, normal);
-		rec.p = r.point_at_parameter(t);
-		return true;
+
+		return false;
     }
 
 	// virtual bool bounding_box(AABB& output_box){
