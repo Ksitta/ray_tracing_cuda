@@ -32,14 +32,14 @@ public:
         float a = rx * ox + rz * oz;
 
         bool hit = false;
-        // if(c1->hit(r, t_min, t_max, h)){
-        //     t_max = h.t;
-        //     hit = true;
-        // }
-        // if(c2->hit(r, t_min, t_max, h)){
-        //     t_max = h.t;
-        //     hit = true;
-        // }
+        if(c1->hit(r, t_min, t_max, h)){
+            t_max = h.t;
+            hit = true;
+        }
+        if(c2->hit(r, t_min, t_max, h)){
+            t_max = h.t;
+            hit = true;
+        }
 
         if(a > eps){
             float rds = ox * ox + oz * oz - a * a;

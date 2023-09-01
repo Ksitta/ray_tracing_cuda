@@ -245,7 +245,7 @@ void add_texture(const char* filename, texture **d_list){
 int main() {
     int nx = 1920;
     int ny = 1080;
-    int ns = 10000;
+    int ns = 1000;
     int tx = 16;
     int ty = 16;
 
